@@ -1,22 +1,47 @@
+import logging
 import uuid
+from contextlib import asynccontextmanager
+from typing import AsyncGenerator
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.background import BackgroundTask
 
 from app.core.config import settings
-from app.schemas.download import DownloadRequest, DownloadResponse, ErrorResponse, StatusResponse
-from app.services.cleanup import cleanup_file
+from app.schemas.download import (
+    DownloadRequest,
+    DownloadResponse,
+    ErrorResponse,
+    StatusResponse,
+)
 from app.services.downloader import downloader
+from app.services.storage import storage
 from app.services.tasks import tasks
+
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    """Gestiona el ciclo de vida de la aplicacion.
+
+    En startup: limpia archivos temporales residuales.
+    En shutdown: no requiere accion.
+    """
+    storage.clean_temp()
+    logger.info("Aplicacion iniciada — temp limpio")
+    yield
+    logger.info("Aplicacion detenida")
+
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -35,9 +60,8 @@ app.mount(
 
 
 @app.get("/")
-async def root() -> dict:
+async def root() -> RedirectResponse:
     """Redirige a la interfaz web."""
-    from fastapi.responses import RedirectResponse
     return RedirectResponse(url="/static/index.html")
 
 
@@ -46,7 +70,7 @@ async def root() -> dict:
     tags=["Health"],
 )
 async def health_check() -> dict:
-    """Endpoint de verificación de salud del API."""
+    """Endpoint de verificacion de salud del API."""
     return {"status": "ok", "version": settings.VERSION}
 
 
@@ -64,7 +88,7 @@ async def request_download(
     request: DownloadRequest,
     background_tasks: BackgroundTasks,
 ) -> DownloadResponse:
-    """Descarga contenido multimedia de YouTube o TikTok.
+    """Descarga contenido multimedia de YouTube.
 
     Acepta una URL, formato (mp3/mp4) y calidad opcional.
     Retorna el task_id de inmediato; la descarga corre en segundo plano.
@@ -125,27 +149,21 @@ async def get_status(task_id: str) -> StatusResponse:
     tags=["Download"],
 )
 async def download_file(task_id: str) -> FileResponse:
-    """Sirve el archivo descargado para su descarga final.
+    """Sirve el archivo descargado para su descarga final."""
+    file_path = storage.get_file(task_id)
 
-    Después de servir el archivo, lo elimina en segundo plano.
-    """
-    candidates = list(settings.TEMP_DIR.glob(f"{task_id}.*"))
-
-    if not candidates:
+    if not file_path:
         raise HTTPException(
             status_code=404,
             detail="Archivo no encontrado o ya fue descargado",
         )
-
-    file_path = candidates[0]
 
     return FileResponse(
         path=str(file_path),
         filename=file_path.name,
         media_type="application/octet-stream",
         background=BackgroundTask(
-            cleanup_file,
+            storage.delete_file,
             str(file_path),
-            settings.CLEANUP_DELAY,
         ),
     )

@@ -18,6 +18,7 @@
     urlInput:          $('#url-input'),
     urlHint:           $('#url-hint'),
     platformIcon:      $('#platform-icon'),
+    btnClearInput:     $('#btn-clear-input'),
     btnMp3:            $('#btn-mp3'),
     btnMp4:            $('#btn-mp4'),
     qualitySelector:   $('#quality-selector'),
@@ -61,14 +62,6 @@
       ],
       name: 'YouTube',
       icon: `<svg class="w-5 h-5 text-red-600" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>`,
-    },
-    tiktok: {
-      patterns: [
-        /(?:https?:\/\/)?(?:www\.)?tiktok\.com\/@[\w.-]+\/video\/\d+/,
-        /(?:https?:\/\/)?(?:www\.)?vm\.tiktok\.com\/[\w]+/,
-      ],
-      name: 'TikTok',
-      icon: `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 0 0-.79-.05A6.34 6.34 0 0 0 3.15 15.2a6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.34-6.34V8.63a8.17 8.17 0 0 0 4.76 1.52V6.69h-1z"/></svg>`,
     },
   };
 
@@ -298,7 +291,7 @@
     const url = dom.urlInput.value.trim();
 
     if (!url) {
-      showError('URL vacía', 'Pega un enlace de YouTube o TikTok para comenzar.');
+      showError('URL vacía', 'Pega un enlace de YouTube para comenzar.');
       return;
     }
 
@@ -309,7 +302,7 @@
 
     const platform = detectPlatform(url);
     if (!platform) {
-      showError('Plataforma no soportada', 'Solo se aceptan enlaces de YouTube y TikTok.');
+      showError('Plataforma no soportada', 'Solo se aceptan enlaces de YouTube.');
       return;
     }
 
@@ -349,6 +342,13 @@
     // Input URL — detectar plataforma en tiempo real
     dom.urlInput.addEventListener('input', () => {
       const url = dom.urlInput.value;
+      const hasText = url.length > 0;
+
+      dom.btnClearInput.classList.toggle('opacity-30', !hasText);
+      dom.btnClearInput.classList.toggle('pointer-events-none', !hasText);
+      dom.btnClearInput.classList.toggle('opacity-100', hasText);
+      dom.btnClearInput.classList.toggle('pointer-events-auto', hasText);
+
       const platform = detectPlatform(url);
 
       if (platform) {
@@ -364,11 +364,18 @@
         state.platform = null;
         dom.platformIcon.classList.add('opacity-0');
         dom.platformIcon.classList.remove('opacity-100');
-        dom.urlHint.textContent = 'Soporta YouTube y TikTok';
+        dom.urlHint.textContent = 'Soporta YouTube';
         dom.urlHint.classList.add('opacity-50');
         dom.urlHint.classList.remove('text-green-700', 'font-bold');
         dom.statusPlatform.textContent = 'Plataforma: —';
       }
+    });
+
+    // Boton limpiar input
+    dom.btnClearInput.addEventListener('click', () => {
+      dom.urlInput.value = '';
+      dom.urlInput.dispatchEvent(new Event('input'));
+      dom.urlInput.focus();
     });
 
     // Toggle de formato

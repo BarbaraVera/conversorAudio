@@ -92,20 +92,33 @@
       <!-- INPUT URL -->
       <fieldset class="space-y-3">
         <legend class="text-sm font-bold uppercase tracking-widest opacity-70">Enlace del video</legend>
-        <div class="relative">
-          <input
-            id="url-input"
-            type="url"
-            placeholder="https://www.youtube.com/watch?v=..."
-            class="os-input w-full pr-12"
-            style="font-size: 16px; padding: 14px 16px;"
-            autocomplete="off"
-            spellcheck="false"
+        <div class="flex gap-2">
+          <div class="relative flex-1 min-w-0">
+            <input
+              id="url-input"
+              type="url"
+              placeholder="https://www.youtube.com/watch?v=..."
+              class="os-input w-full"
+              style="font-size: 16px; padding: 14px 16px;"
+              autocomplete="off"
+              spellcheck="false"
+            >
+            <span id="platform-icon" class="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 transition-opacity duration-200">
+            </span>
+          </div>
+          <button
+            id="btn-clear-input"
+            type="button"
+            class="os-btn opacity-30 pointer-events-none shrink-0 transition-opacity duration-150"
+            aria-label="Limpiar enlace"
+            style="padding: 14px 14px; font-size: 16px;"
           >
-          <span id="platform-icon" class="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 transition-opacity duration-200">
-          </span>
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+            </svg>
+          </button>
         </div>
-        <p id="url-hint" class="text-xs opacity-50">Soporta YouTube y TikTok</p>
+        <p id="url-hint" class="text-xs opacity-50">Soporta YouTube</p>
       </fieldset>
 
       <!-- FORMATO / CALIDAD -->
@@ -244,7 +257,7 @@
       <div class="os-step-card" style="background: #F09351;">
         <span class="os-step-number">01</span>
         <h3 class="os-step-title">PEGA EL ENLACE</h3>
-        <p class="os-step-desc">Copia la URL de YouTube o TikTok desde tu navegador.</p>
+        <p class="os-step-desc">Copia la URL de YouTube desde tu navegador.</p>
       </div>
 
       <!-- Paso 02 -->

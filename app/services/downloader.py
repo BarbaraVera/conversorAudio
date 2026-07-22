@@ -6,16 +6,15 @@ from typing import Optional
 import yt_dlp
 from static_ffmpeg import add_paths
 
-from app.core.config import settings
+from app.services.storage import storage
 from app.services.tasks import tasks
 
 
 class MediaDownloader:
-    """Servicio de descarga y conversión de medios con yt-dlp."""
+    """Servicio de descarga y conversion de medios con yt-dlp."""
 
     def __init__(self) -> None:
         add_paths()
-        self.temp_dir = settings.TEMP_DIR
 
     def _build_opts(
         self,
@@ -23,24 +22,19 @@ class MediaDownloader:
         fmt: str,
         quality: Optional[str],
         task_id: str,
-        url: str,
     ) -> dict:
         """Construye las opciones de yt-dlp."""
 
-        base_opts = {
+        base_opts: dict = {
             "outtmpl": output_path,
             "noplaylist": True,
             "quiet": True,
             "no_warnings": True,
-
-            # une video + audio en mp4
             "merge_output_format": "mp4",
             "prefer_ffmpeg": True,
-
             "progress_hooks": [
                 self._make_progress_hook(task_id)
             ],
-
             "http_headers": {
                 "User-Agent": (
                     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -52,9 +46,7 @@ class MediaDownloader:
 
         if fmt == "mp3":
             bitrate = quality or "192"
-
             base_opts["format"] = "bestaudio/best"
-
             base_opts["postprocessors"] = [
                 {
                     "key": "FFmpegExtractAudio",
@@ -62,38 +54,15 @@ class MediaDownloader:
                     "preferredquality": bitrate,
                 }
             ]
-
         else:
-
-            is_tiktok = ("tiktok.com" in url.lower()or "vm.tiktok.com" in url.lower())
-
             if quality:
                 res = quality.replace("p", "")
-
-                if is_tiktok:
-                    # Preferir H.264 (AVC) para TikTok
-                    base_opts["format"] = (
-                        f"bestvideo[vcodec^=avc1][height<={res}]+bestaudio/"
-                        f"bestvideo[height<={res}]+bestaudio/"
-                        f"best[height<={res}]"
-                    )
-                else:
-                    # Mantener YouTube exactamente igual
-                    base_opts["format"] = (
-                        f"bv*[height<={res}]+ba/"
-                        f"b[height<={res}]"
-                    )
-
+                base_opts["format"] = (
+                    f"bv*[height<={res}]+ba/"
+                    f"b[height<={res}]"
+                )
             else:
-
-                if is_tiktok:
-                    base_opts["format"] = (
-                        "bestvideo[vcodec^=avc1]+bestaudio/"
-                        "bestvideo+bestaudio/"
-                        "best"
-                    )
-                else:
-                    base_opts["format"] = "bv*+ba/b"
+                base_opts["format"] = "bv*+ba/b"
 
         return base_opts
 
@@ -112,7 +81,7 @@ class MediaDownloader:
         return hook
 
     def _sync_download(self, url: str, opts: dict) -> dict:
-        """Función síncrona auxiliar para ejecutar en un hilo separado."""
+        """Funcion sincrona auxiliar para ejecutar en un hilo separado."""
         with yt_dlp.YoutubeDL(opts) as ydl:
             return ydl.extract_info(url, download=True)
 
@@ -130,28 +99,20 @@ class MediaDownloader:
         tasks.update(task_id, progress=5)
 
         ext = "mp3" if fmt == "mp3" else "mp4"
-        output_template = str(self.temp_dir / f"{task_id}.%(ext)s")
-        output_path = str(self.temp_dir / f"{task_id}.{ext}")
+        output_template = storage.create_output_template(task_id)
+        expected_path = storage.get_expected_path(task_id, ext)
 
-        opts = self._build_opts(
-            output_template,
-            fmt,
-            quality,
-            task_id,
-            url,
-        )
+        opts = self._build_opts(output_template, fmt, quality, task_id)
 
         try:
             tasks.update(task_id, progress=10)
-
-            # Ejecución síncrona en un hilo secundario
             info = await asyncio.to_thread(self._sync_download, url, opts)
 
-            final_path = Path(output_path)
+            final_path = expected_path
             if not final_path.exists():
-                for f in self.temp_dir.glob(f"{task_id}.*"):
-                    final_path = f
-                    break
+                found = storage.get_file(task_id)
+                if found:
+                    final_path = found
 
             if not final_path.exists():
                 raise RuntimeError("El archivo no fue generado")
@@ -159,16 +120,6 @@ class MediaDownloader:
             file_size = final_path.stat().st_size
             title = (info or {}).get("title", final_path.stem)
             duration = (info or {}).get("duration", 0)
-
-            result = {
-                "task_id": task_id,
-                "file_path": str(final_path),
-                "file_name": final_path.name,
-                "file_size": self._format_size(file_size),
-                "duration": self._format_duration(duration),
-                "title": title,
-                "status": "completed",
-            }
 
             tasks.complete(
                 task_id,
@@ -178,7 +129,15 @@ class MediaDownloader:
                 duration=self._format_duration(duration),
             )
 
-            return result
+            return {
+                "task_id": task_id,
+                "file_path": str(final_path),
+                "file_name": final_path.name,
+                "file_size": self._format_size(file_size),
+                "duration": self._format_duration(duration),
+                "title": title,
+                "status": "completed",
+            }
 
         except yt_dlp.utils.ExtractorError as e:
             tasks.fail(task_id, str(e))
