@@ -1,13 +1,15 @@
 import logging
+import re
 import uuid
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
-from fastapi import BackgroundTasks, FastAPI, HTTPException
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Path
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.background import BackgroundTask
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from app.core.config import settings
 from app.schemas.download import (
@@ -21,6 +23,51 @@ from app.services.storage import storage
 from app.services.tasks import tasks
 
 logger = logging.getLogger(__name__)
+
+_TASK_ID_RE = re.compile(r"^[a-f0-9]{12}$")
+
+
+def _sanitize_filename(name: str) -> str:
+    """Limpia un titulo para usarlo como nombre de archivo seguro."""
+    name = re.sub(r'[\\/*?:"<>|]', "", name)
+    name = name.strip(". ")
+    return name[:100] if name else "descarga"
+
+
+class SecurityHeadersMiddleware:
+    """Middleware ASGI que agrega headers de seguridad a toda respuesta."""
+
+    _HEADERS = {
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Referrer-Policy": "strict-origin-when-cross-origin",
+        "Content-Security-Policy": (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            "font-src 'self' https://fonts.gstatic.com; "
+            "img-src 'self' data:; "
+            "connect-src 'self'"
+        ),
+    }
+
+    def __init__(self, app: ASGIApp) -> None:
+        self._app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self._app(scope, receive, send)
+            return
+
+        async def send_with_headers(message: dict) -> None:
+            if message["type"] == "http.response.start":
+                headers = message.get("headers", [])
+                for key, value in self._HEADERS.items():
+                    headers.append((key.lower().encode(), value.encode()))
+                message["headers"] = headers
+            await send(message)
+
+        await self._app(scope, receive, send_with_headers)
 
 
 @asynccontextmanager
@@ -51,6 +98,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_middleware(SecurityHeadersMiddleware)
 
 app.mount(
     "/static",
@@ -135,7 +184,9 @@ async def _run_download(
     responses={404: {"model": ErrorResponse}},
     tags=["Download"],
 )
-async def get_status(task_id: str) -> StatusResponse:
+async def get_status(
+    task_id: str = Path(..., pattern=r"^[a-f0-9]{12}$"),
+) -> StatusResponse:
     """Obtiene el estado actual de una descarga en progreso."""
     task = tasks.get(task_id)
     if not task:
@@ -148,19 +199,30 @@ async def get_status(task_id: str) -> StatusResponse:
     response_class=FileResponse,
     tags=["Download"],
 )
-async def download_file(task_id: str) -> FileResponse:
+async def download_file(
+    task_id: str = Path(..., pattern=r"^[a-f0-9]{12}$"),
+) -> FileResponse:
     """Sirve el archivo descargado para su descarga final."""
-    file_path = storage.get_file(task_id)
+    task = tasks.get(task_id)
+    if not task or not task.get("file_path"):
+        raise HTTPException(
+            status_code=404,
+            detail="Archivo no encontrado o ya fue descargado",
+        )
 
+    file_path = storage.get_file(task["file_path"])
     if not file_path:
         raise HTTPException(
             status_code=404,
             detail="Archivo no encontrado o ya fue descargado",
         )
 
+    title = task.get("title") or file_path.stem
+    download_name = f"{_sanitize_filename(title)}.{file_path.suffix.lstrip('.')}"
+
     return FileResponse(
         path=str(file_path),
-        filename=file_path.name,
+        filename=download_name,
         media_type="application/octet-stream",
         background=BackgroundTask(
             storage.delete_file,

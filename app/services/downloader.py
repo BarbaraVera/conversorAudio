@@ -6,7 +6,8 @@ from typing import Optional
 import yt_dlp
 from static_ffmpeg import add_paths
 
-from app.services.storage import storage
+from app.core.config import settings
+from app.services.storage import _sanitize_filename, storage
 from app.services.tasks import tasks
 
 
@@ -32,6 +33,7 @@ class MediaDownloader:
             "no_warnings": True,
             "merge_output_format": "mp4",
             "prefer_ffmpeg": True,
+            "max_filesize": settings.MAX_DOWNLOAD_SIZE_MB * 1024 * 1024,
             "progress_hooks": [
                 self._make_progress_hook(task_id)
             ],
@@ -85,6 +87,12 @@ class MediaDownloader:
         with yt_dlp.YoutubeDL(opts) as ydl:
             return ydl.extract_info(url, download=True)
 
+    @staticmethod
+    def _sync_extract_info(url: str, opts: dict) -> dict:
+        """Extrae info del video sin descargarlo."""
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            return ydl.extract_info(url, download=False)
+
     async def download(
         self,
         url: str,
@@ -99,26 +107,31 @@ class MediaDownloader:
         tasks.update(task_id, progress=5)
 
         ext = "mp3" if fmt == "mp3" else "mp4"
-        output_template = storage.create_output_template(task_id)
-        expected_path = storage.get_expected_path(task_id, ext)
-
-        opts = self._build_opts(output_template, fmt, quality, task_id)
 
         try:
             tasks.update(task_id, progress=10)
-            info = await asyncio.to_thread(self._sync_download, url, opts)
+
+            info_opts = {"quiet": True, "no_warnings": True, "noplaylist": True}
+            info = await asyncio.to_thread(self._sync_extract_info, url, info_opts)
+            title = (info or {}).get("title", "descarga")
+
+            output_template = storage.create_output_template(title)
+            expected_path = storage.base_dir / f"{_sanitize_filename(title)}.{ext}"
+
+            opts = self._build_opts(output_template, fmt, quality, task_id)
+            await asyncio.to_thread(self._sync_download, url, opts)
 
             final_path = expected_path
             if not final_path.exists():
-                found = storage.get_file(task_id)
-                if found:
-                    final_path = found
+                for f in storage.base_dir.iterdir():
+                    if f.suffix == f".{ext}" and storage._is_within_base(f):
+                        final_path = f
+                        break
 
             if not final_path.exists():
                 raise RuntimeError("El archivo no fue generado")
 
             file_size = final_path.stat().st_size
-            title = (info or {}).get("title", final_path.stem)
             duration = (info or {}).get("duration", 0)
 
             tasks.complete(
@@ -127,6 +140,7 @@ class MediaDownloader:
                 file_name=final_path.name,
                 file_size=self._format_size(file_size),
                 duration=self._format_duration(duration),
+                title=title,
             )
 
             return {

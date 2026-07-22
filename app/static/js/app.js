@@ -326,7 +326,7 @@
       updateProgress(100, '¡Listo!', 'Archivo listo para descargar');
 
       showResult(
-        finalStatus.file_name || `descarga.${state.format}`,
+        finalStatus.title || `descarga.${state.format}`,
         meta,
         `${API_BASE}/api/download/${taskId}`
       );
@@ -404,8 +404,13 @@
       chip.classList.add('active');
     });
 
-    // Botón descargar
+    // Boton descargar
     dom.btnDownload.addEventListener('click', handleDownload);
+
+    // Descarga de resultado: ocultar seccion completa despues del primer click
+    dom.resultLink.addEventListener('click', () => {
+      dom.resultSection.classList.add('hidden');
+    });
 
     // Enter en input dispara descarga
     dom.urlInput.addEventListener('keydown', (e) => {

@@ -26,9 +26,11 @@ class Settings(BaseSettings):
     DEFAULT_VIDEO_QUALITY: str = "720"
     ALLOWED_AUDIO_FORMATS: List[str] = ["mp3"]
     ALLOWED_VIDEO_FORMATS: List[str] = ["mp4"]
+    ALLOWED_DOMAINS: List[str] = ["youtube.com", "youtu.be"]
 
     DOWNLOAD_TIMEOUT: int = 300
     CLEANUP_DELAY: int = 10
+    MAX_DOWNLOAD_SIZE_MB: int = 1024
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 

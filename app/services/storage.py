@@ -1,11 +1,18 @@
 import logging
-import os
+import re
 from pathlib import Path
 from typing import Optional
 
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
+
+
+def _sanitize_filename(name: str) -> str:
+    """Limpia un titulo para usarlo como nombre de archivo seguro."""
+    name = re.sub(r'[\\/*?:"<>|]', "", name)
+    name = name.strip(". ")
+    return name[:100] if name else "descarga"
 
 
 class StorageService:
@@ -16,32 +23,42 @@ class StorageService:
     """
 
     def __init__(self, base_dir: Optional[Path] = None) -> None:
-        self._base_dir: Path = base_dir or settings.TEMP_DIR
+        self._base_dir: Path = (base_dir or settings.TEMP_DIR).resolve()
 
     @property
     def base_dir(self) -> Path:
         return self._base_dir
 
-    def create_output_template(self, task_id: str) -> str:
-        """Devuelve la plantilla de salida para yt-dlp (%(ext)s se resuelve solo)."""
-        return str(self._base_dir / f"{task_id}.%(ext)s")
+    def _is_within_base(self, path: Path) -> bool:
+        """Verifica que una ruta resuelta este dentro de la carpeta base."""
+        try:
+            return path.resolve().is_relative_to(self._base_dir)
+        except (OSError, ValueError):
+            return False
 
-    def get_expected_path(self, task_id: str, ext: str) -> Path:
-        """Devuelve la ruta esperada del archivo tras la conversion."""
-        return self._base_dir / f"{task_id}.{ext}"
+    def create_output_template(self, title: str) -> str:
+        """Devuelve la plantilla de salida para yt-dlp basada en el titulo."""
+        name = _sanitize_filename(title)
+        return str(self._base_dir / f"{name}.%(ext)s")
 
-    def get_file(self, task_id: str) -> Optional[Path]:
-        """Busca un archivo por task_id. Devuelve la primera coincidencia o None."""
-        candidates = list(self._base_dir.glob(f"{task_id}.*"))
-        if candidates:
-            logger.info("Archivo encontrado: %s", candidates[0].name)
-            return candidates[0]
-        logger.warning("Archivo no encontrado para task_id=%s", task_id)
+    def get_file(self, file_path: str) -> Optional[Path]:
+        """Devuelve la ruta del archivo si existe y esta dentro de la carpeta base."""
+        path = Path(file_path)
+        if not self._is_within_base(path):
+            logger.warning("Ruta fuera de temp: %s", file_path)
+            return None
+        if path.exists() and path.is_file():
+            logger.info("Archivo encontrado: %s", path.name)
+            return path
+        logger.warning("Archivo no encontrado: %s", file_path)
         return None
 
     def delete_file(self, file_path: str) -> bool:
-        """Elimina un archivo temporal. Devuelve True si se elimino correctamente."""
+        """Elimina un archivo temporal. Verifica que este dentro de la carpeta base."""
         path = Path(file_path)
+        if not self._is_within_base(path):
+            logger.warning("Intento de eliminar archivo fuera de temp: %s", file_path)
+            return False
         if path.exists() and path.is_file():
             try:
                 path.unlink()
