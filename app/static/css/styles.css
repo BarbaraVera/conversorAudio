@@ -1,0 +1,690 @@
+/* =============================================
+   ConversorAudio — Retro 90s OS Design System
+   ============================================= */
+
+/* ---- Variables de diseño ---- */
+:root {
+  --color-cream:      #FFFDF9;
+  --color-sand:       #E2BEA2;
+  --color-sand-dark:  #C9A882;
+  --color-orange:     #EB7A29;
+  --color-orange-dark:#D06820;
+  --color-black:      #000000;
+  --color-white:      #FFFFFF;
+
+  --shadow-retro:        4px 4px 0px #000000;
+  --shadow-retro-sm:     3px 3px 0px #000000;
+  --shadow-retro-pressed:1px 1px 0px #000000;
+  --shadow-retro-hover:  2px 2px 0px #000000;
+
+  --radius-window: 8px;
+  --border-heavy:  2px solid #000000;
+  --transition-press: 120ms ease-out;
+}
+
+/* ---- Reset suave ---- */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* =============================================
+   COMPONENTE: Top Desktop Bar
+   ============================================= */
+.os-desktop-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: var(--color-cream);
+  border-bottom: var(--border-heavy);
+  padding: 0 12px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.08);
+}
+
+/* Icono de la app */
+.os-app-icon {
+  width: 24px;
+  height: 24px;
+  background: var(--color-orange);
+  border: 1.5px solid var(--color-black);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 1px 1px 0px var(--color-black);
+  flex-shrink: 0;
+}
+
+/* Enlaces de menú */
+.os-menu-links {
+  display: flex;
+  gap: 2px;
+  margin-left: 4px;
+}
+
+.os-menu-link {
+  background: none;
+  border: 1.5px solid transparent;
+  border-radius: 3px;
+  padding: 2px 8px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-black);
+  cursor: pointer;
+  transition: all var(--transition-press);
+}
+
+.os-menu-link:hover {
+  border-color: var(--color-black);
+  background: var(--color-sand);
+  box-shadow: 1px 1px 0px var(--color-black);
+}
+
+.os-menu-link:active {
+  transform: translate(1px, 1px);
+  box-shadow: none;
+}
+
+/* Indicador de API */
+.os-api-status {
+  font-size: 10px;
+  color: var(--color-black);
+  opacity: 0.65;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.os-status-dot {
+  width: 7px;
+  height: 7px;
+  background: #22c55e;
+  border: 1px solid var(--color-black);
+  border-radius: 50%;
+  display: inline-block;
+  box-shadow: 0 0 4px rgba(34, 197, 94, 0.5);
+}
+
+/* Reloj digital */
+.os-clock {
+  font-family: 'Space Mono', 'Courier New', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  background: var(--color-black);
+  color: #22c55e;
+  padding: 3px 8px;
+  border: 1.5px solid var(--color-black);
+  border-radius: 3px;
+  box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.4);
+  line-height: 1;
+}
+
+/* =============================================
+   COMPONENTE: Ventana OS
+   ============================================= */
+.os-window {
+  background: var(--color-cream);
+  border: var(--border-heavy);
+  border-radius: var(--radius-window);
+  box-shadow: var(--shadow-retro);
+  overflow: hidden;
+  animation: windowOpen 0.25s ease-out both;
+}
+
+@keyframes windowOpen {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* ---- Titlebar ---- */
+.os-titlebar {
+  background: var(--color-orange);
+  border-bottom: var(--border-heavy);
+  color: var(--color-black);
+}
+
+/* ---- Botones de control ( _ □ X ) ---- */
+.os-control-btn {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-cream);
+  border: 1.5px solid var(--color-black);
+  border-radius: 3px;
+  font-size: 13px;
+  line-height: 1;
+  font-family: inherit;
+  cursor: pointer;
+  transition: transform var(--transition-press), box-shadow var(--transition-press);
+  box-shadow: 1px 1px 0px var(--color-black);
+  user-select: none;
+}
+
+.os-control-btn:hover {
+  background: var(--color-sand);
+}
+
+.os-control-btn:active {
+  transform: translate(1px, 1px);
+  box-shadow: 0px 0px 0px var(--color-black);
+}
+
+/* ---- Contenido ---- */
+.os-content {
+  background: var(--color-cream);
+}
+
+/* =============================================
+   COMPONENTE: Inputs OS
+   ============================================= */
+.os-input {
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--color-white);
+  border: var(--border-heavy);
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--color-black);
+  outline: none;
+  transition: box-shadow var(--transition-press), transform var(--transition-press);
+  box-shadow: var(--shadow-retro-sm);
+}
+
+.os-input::placeholder {
+  color: #999;
+  opacity: 1;
+}
+
+.os-input:focus {
+  box-shadow: var(--shadow-retro);
+  transform: translate(-1px, -1px);
+}
+
+.os-input:active {
+  transform: translate(1px, 1px);
+  box-shadow: var(--shadow-retro-pressed);
+}
+
+/* =============================================
+   COMPONENTE: Botones OS
+   ============================================= */
+.os-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: var(--color-cream);
+  border: var(--border-heavy);
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-black);
+  cursor: pointer;
+  text-decoration: none;
+  user-select: none;
+  box-shadow: var(--shadow-retro-sm);
+  transition: transform var(--transition-press), box-shadow var(--transition-press);
+}
+
+.os-btn:hover {
+  background: var(--color-sand);
+}
+
+.os-btn:active,
+.os-btn.pressed {
+  transform: translate(2px, 2px);
+  box-shadow: var(--shadow-retro-pressed);
+}
+
+.os-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: var(--shadow-retro-sm);
+}
+
+/* Botón primario (naranja) */
+.os-btn-primary {
+  background: var(--color-orange);
+  color: var(--color-black);
+}
+
+.os-btn-primary:hover {
+  background: var(--color-orange-dark);
+}
+
+.os-btn-primary:active,
+.os-btn-primary.pressed {
+  transform: translate(2px, 2px);
+  box-shadow: var(--shadow-retro-pressed);
+}
+
+/* =============================================
+   COMPONENTE: Toggle buttons (formato)
+   ============================================= */
+.os-toggle-btn {
+  padding: 10px 16px;
+  background: var(--color-white);
+  border: var(--border-heavy);
+  border-radius: 6px;
+  font-family: inherit;
+  color: var(--color-black);
+  cursor: pointer;
+  user-select: none;
+  box-shadow: var(--shadow-retro-sm);
+  transition: transform var(--transition-press), box-shadow var(--transition-press), background var(--transition-press);
+}
+
+.os-toggle-btn:hover {
+  background: var(--color-sand);
+}
+
+.os-toggle-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: var(--shadow-retro-pressed);
+}
+
+/* Estado activo */
+.os-toggle-btn.active {
+  background: var(--color-orange);
+  box-shadow: var(--shadow-retro-pressed);
+  transform: translate(2px, 2px);
+}
+
+/* =============================================
+   COMPONENTE: Quality chips
+   ============================================= */
+.os-chip {
+  padding: 5px 12px;
+  background: var(--color-white);
+  border: 1.5px solid var(--color-black);
+  border-radius: 20px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-black);
+  cursor: pointer;
+  user-select: none;
+  transition: transform var(--transition-press), box-shadow var(--transition-press), background var(--transition-press);
+  box-shadow: 1px 1px 0px var(--color-black);
+}
+
+.os-chip:hover {
+  background: var(--color-sand);
+}
+
+.os-chip:active {
+  transform: translate(1px, 1px);
+  box-shadow: 0px 0px 0px var(--color-black);
+}
+
+.os-chip.active {
+  background: var(--color-orange);
+  box-shadow: 1px 1px 0px var(--color-black);
+  transform: translate(1px, 1px);
+}
+
+/* =============================================
+   COMPONENTE: Barra de progreso
+   ============================================= */
+.os-progress-track {
+  width: 100%;
+  height: 18px;
+  background: var(--color-white);
+  border: var(--border-heavy);
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: var(--shadow-retro-sm);
+}
+
+.os-progress-fill {
+  height: 100%;
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--color-orange),
+    var(--color-orange) 8px,
+    var(--color-orange-dark) 8px,
+    var(--color-orange-dark) 16px
+  );
+  background-size: 22.63px 100%;
+  transition: width 0.3s ease-out;
+  animation: progressStripes 0.6s linear infinite;
+}
+
+@keyframes progressStripes {
+  from { background-position: 0 0; }
+  to   { background-position: 22.63px 0; }
+}
+
+/* =============================================
+   COMPONENTE: Tarjeta de resultado
+   ============================================= */
+.os-result-card {
+  background: var(--color-white);
+  border: var(--border-heavy);
+  border-radius: var(--radius-window);
+  box-shadow: var(--shadow-retro-sm);
+}
+
+/* =============================================
+   COMPONENTE: Error card
+   ============================================= */
+.os-error-card {
+  background: #FFF0F0;
+  border: 2px solid #CC3333;
+  border-radius: var(--radius-window);
+  box-shadow: 3px 3px 0px #CC3333;
+  color: #991111;
+}
+
+/* =============================================
+   COMPONENTE: Status bar
+   ============================================= */
+.os-statusbar {
+  background: var(--color-sand-dark);
+  border: 1.5px solid var(--color-black);
+  border-radius: 0 0 var(--radius-window) var(--radius-window);
+  color: var(--color-black);
+}
+
+/* =============================================
+   UTILIDADES
+   ============================================= */
+
+.hidden {
+  display: none !important;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+:focus-visible {
+  outline: 2px dashed var(--color-orange);
+  outline-offset: 2px;
+}
+
+/* =============================================
+   RESPONSIVE
+   ============================================= */
+
+/* Tablets */
+@media (max-width: 768px) {
+  body {
+    padding-top: 44px !important;
+  }
+
+  .os-desktop-bar {
+    padding: 0 8px;
+    height: 36px;
+  }
+
+  .os-menu-links {
+    display: none;
+  }
+
+  .os-api-status span:not(.os-status-dot) {
+    display: none;
+  }
+
+  .os-api-status {
+    font-size: 9px;
+  }
+
+  .os-clock {
+    font-size: 10px;
+    padding: 2px 6px;
+  }
+
+  .os-window {
+    border-radius: 4px;
+  }
+
+  .os-titlebar {
+    border-radius: 4px 4px 0 0;
+  }
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+  body {
+    padding-top: 44px !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+    padding-bottom: 16px !important;
+  }
+
+  .os-desktop-bar {
+    padding: 0 6px;
+    height: 40px;
+    gap: 4px;
+  }
+
+  .os-desktop-bar > div {
+    gap: 6px;
+  }
+
+  .os-app-icon {
+    width: 20px;
+    height: 20px;
+  }
+
+  .os-app-icon svg {
+    width: 10px;
+    height: 10px;
+  }
+
+  .os-desktop-bar .text-sm {
+    font-size: 11px;
+  }
+
+  .os-menu-links {
+    display: none;
+  }
+
+  .os-api-status {
+    display: none;
+  }
+
+  .os-clock {
+    font-size: 10px;
+    padding: 2px 5px;
+    letter-spacing: 0;
+  }
+
+  .os-window {
+    border-radius: 4px;
+    box-shadow: 2px 2px 0px #000000;
+  }
+
+  .os-titlebar {
+    border-radius: 4px 4px 0 0;
+    padding: 6px 10px;
+  }
+
+  .os-titlebar .text-base {
+    font-size: 13px;
+  }
+
+  .os-control-btn {
+    width: 18px;
+    height: 18px;
+    font-size: 11px;
+  }
+
+  .os-content {
+    padding: 14px;
+  }
+
+  .os-btn {
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+
+  .os-input {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  .os-toggle-btn {
+    padding: 10px 8px;
+    font-size: 13px;
+  }
+
+  .os-toggle-btn svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .os-toggle-btn .font-bold {
+    font-size: 12px;
+  }
+
+  .os-chip {
+    padding: 4px 10px;
+    font-size: 10px;
+  }
+
+  .os-step-card {
+    padding: 18px 14px;
+  }
+
+  .os-step-number {
+    font-size: 36px;
+  }
+
+  .os-step-title {
+    font-size: 12px;
+  }
+
+  .os-step-desc {
+    font-size: 11px;
+  }
+
+  .os-statusbar {
+    padding: 4px 10px;
+    font-size: 10px;
+  }
+}
+
+/* Very small screens */
+@media (max-width: 360px) {
+  .os-desktop-bar {
+    height: 36px;
+  }
+
+  .os-desktop-bar .text-sm {
+    font-size: 10px;
+  }
+
+  .os-desktop-bar .font-normal {
+    display: none;
+  }
+
+  .os-content {
+    padding: 12px;
+  }
+
+  .os-toggle-btn {
+    padding: 8px 6px;
+  }
+
+  .os-toggle-btn .font-bold {
+    font-size: 11px;
+  }
+}
+
+/* =============================================
+   COMPONENTE: Tarjetas de pasos (CÓMO FUNCIONA)
+   ============================================= */
+.os-step-card {
+  border: 2px solid var(--color-black);
+  border-radius: 8px;
+  box-shadow: 4px 4px 0px var(--color-black);
+  padding: 24px 20px;
+  position: relative;
+  transition: transform var(--transition-press), box-shadow var(--transition-press);
+}
+
+.os-step-card:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 5px 5px 0px var(--color-black);
+}
+
+.os-step-card:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0px var(--color-black);
+}
+
+.os-step-number {
+  font-size: 48px;
+  font-weight: 700;
+  line-height: 1;
+  opacity: 0.2;
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  color: var(--color-black);
+  user-select: none;
+}
+
+.os-step-title {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+  color: var(--color-black);
+}
+
+.os-step-desc {
+  font-size: 12px;
+  line-height: 1.5;
+  opacity: 0.75;
+  color: var(--color-black);
+}
+
+/* =============================================
+   REDUCED MOTION
+   ============================================= */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .os-progress-fill {
+    animation: none;
+  }
+}

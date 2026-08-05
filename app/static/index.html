@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ConversorAudio — Descarga multimedia</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23EB7A29'%3E%3Cpath d='M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z'/%3E%3C/svg%3E">
+
+  <!-- Tailwind CSS vía CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            cream:      '#FFFDF9',
+            sand:       '#E2BEA2',
+            'sand-dark':'#C9A882',
+            orange:     '#EB7A29',
+            'orange-dark':'#D06820',
+            'orange-light':'#F09351',
+          },
+          fontFamily: {
+            mono: ['"Space Mono"', 'ui-monospace', 'Courier New', 'monospace'],
+          },
+          boxShadow: {
+            'retro':     '4px 4px 0px #000000',
+            'retro-sm':  '3px 3px 0px #000000',
+            'retro-lg':  '5px 5px 0px #000000',
+            'retro-pressed': '1px 1px 0px #000000',
+          },
+        },
+      },
+    }
+  </script>
+
+  <!-- Google Fonts: Space Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+  <!-- Hoja de estilos custom -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body class="bg-sand min-h-screen font-mono flex flex-col items-center pt-20 pb-8 px-4 md:px-8">
+
+  <!-- ======================== TOP DESKTOP BAR ======================== -->
+  <nav class="os-desktop-bar">
+    <div class="flex items-center gap-4">
+      <div class="os-app-icon">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 18V5l12-2v13"/>
+          <circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+        </svg>
+      </div>
+      <span class="text-sm font-bold tracking-tight">ConversorAudio <span class="font-normal opacity-50">v1.0</span></span>
+    </div>
+    <div class="flex items-center gap-4">
+      <span class="os-api-status">
+        API: <span class="font-bold">Online</span>
+        <span class="os-status-dot"></span>
+      </span>
+      <div class="os-clock" id="os-clock">00:00:00</div>
+    </div>
+  </nav>
+
+  <!-- ======================== VENTANA PRINCIPAL ======================== -->
+  <main class="os-window w-full" style="max-width: 850px;">
+
+    <!-- Titlebar -->
+    <div class="os-titlebar flex items-center justify-between px-4 py-2.5 cursor-default select-none">
+      <div class="flex items-center gap-2.5">
+        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+        </svg>
+        <span class="text-base font-bold">Descargador de medios</span>
+      </div>
+      <div class="flex gap-1.5">
+        <button class="os-control-btn" aria-label="Minimizar">_</button>
+        <button class="os-control-btn" aria-label="Maximizar">□</button>
+        <button class="os-control-btn" aria-label="Cerrar">×</button>
+      </div>
+    </div>
+
+    <!-- Contenido -->
+    <div class="os-content p-6 md:p-8 space-y-6">
+
+      <!-- INPUT URL -->
+      <fieldset class="space-y-3">
+        <legend class="text-sm font-bold uppercase tracking-widest opacity-70">Enlace del video</legend>
+        <div class="flex gap-2">
+          <div class="relative flex-1 min-w-0">
+            <input
+              id="url-input"
+              type="url"
+              placeholder="https://www.youtube.com/watch?v=..."
+              class="os-input w-full"
+              style="font-size: 16px; padding: 14px 16px;"
+              autocomplete="off"
+              spellcheck="false"
+            >
+            <span id="platform-icon" class="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 transition-opacity duration-200">
+            </span>
+          </div>
+          <button
+            id="btn-clear-input"
+            type="button"
+            class="os-btn opacity-30 pointer-events-none shrink-0 transition-opacity duration-150"
+            aria-label="Limpiar enlace"
+            style="padding: 14px 14px; font-size: 16px;"
+          >
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+            </svg>
+          </button>
+        </div>
+        <p id="url-hint" class="text-xs opacity-50">Soporta YouTube</p>
+      </fieldset>
+
+      <!-- FORMATO / CALIDAD -->
+      <fieldset class="space-y-3">
+        <legend class="text-sm font-bold uppercase tracking-widest opacity-70">Formato de salida</legend>
+        <div class="flex flex-col sm:flex-row gap-4">
+          <button
+            id="btn-mp3"
+            type="button"
+            class="os-toggle-btn flex-1 flex items-center justify-center gap-3 active"
+            data-format="mp3"
+            style="padding: 16px; font-size: 15px;"
+          >
+            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 18V5l12-2v13"/>
+              <circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+            </svg>
+            <span class="font-bold">Audio MP3</span>
+          </button>
+
+          <button
+            id="btn-mp4"
+            type="button"
+            class="os-toggle-btn flex-1 flex items-center justify-center gap-3"
+            data-format="mp4"
+            style="padding: 16px; font-size: 15px;"
+          >
+            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/>
+              <line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/>
+              <line x1="2" y1="12" x2="22" y2="12"/>
+              <line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/>
+              <line x1="17" y1="7" x2="22" y2="7"/><line x1="17" y1="17" x2="22" y2="17"/>
+            </svg>
+            <span class="font-bold">Video MP4</span>
+          </button>
+        </div>
+
+        <div id="quality-selector" class="flex gap-2 mt-2">
+        </div>
+      </fieldset>
+
+      <!-- BOTÓN DESCARGAR -->
+      <button
+        id="btn-download"
+        type="button"
+        class="os-btn os-btn-primary w-full font-bold"
+        style="font-size: 17px; padding: 16px 24px;"
+      >
+        <span id="btn-download-text" class="flex items-center justify-center gap-2">
+          <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+            <polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+          </svg>
+          Descargar
+        </span>
+      </button>
+
+      <!-- PROGRESO (oculto) -->
+      <div id="progress-section" class="hidden space-y-3">
+        <div class="flex items-center justify-between text-sm">
+          <span id="progress-label" class="font-bold opacity-70">Procesando...</span>
+          <span id="progress-percent" class="font-bold">0%</span>
+        </div>
+        <div class="os-progress-track">
+          <div id="progress-bar" class="os-progress-fill" style="width: 0%"></div>
+        </div>
+        <p id="progress-detail" class="text-xs opacity-50">Conectando con el servidor...</p>
+      </div>
+
+      <!-- RESULTADO (oculto) -->
+      <div id="result-section" class="hidden">
+        <div class="os-result-card p-5 space-y-4">
+          <div class="flex items-start gap-4">
+            <div class="flex-shrink-0 w-14 h-14 bg-yellow-200 border-2 border-black rounded-lg flex items-center justify-center shadow-retro-sm">
+              <svg class="w-7 h-7 text-yellow-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+              </svg>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p id="result-title" class="text-base font-bold truncate">nombre_del_archivo.mp3</p>
+              <p id="result-meta" class="text-sm opacity-50 mt-0.5">MP3 · 3:42 · 3.2 MB</p>
+            </div>
+          </div>
+          <a
+            id="result-download-link"
+            href="#"
+            class="os-btn os-btn-primary w-full font-bold inline-flex items-center justify-center gap-2"
+            style="font-size: 14px; padding: 12px 20px;"
+            download
+          >
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Guardar archivo
+          </a>
+        </div>
+      </div>
+
+      <!-- ERROR (oculto) -->
+      <div id="error-section" class="hidden">
+        <div class="os-error-card p-5 flex items-start gap-3">
+          <div class="flex-shrink-0 text-2xl leading-none mt-0.5">⚠</div>
+          <div>
+            <p id="error-title" class="text-base font-bold">Algo salió mal</p>
+            <p id="error-message" class="text-sm opacity-70 mt-1">No se pudo procesar la solicitud.</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Status bar -->
+    <div class="os-statusbar flex items-center justify-between px-4 py-2 text-xs">
+      <div class="flex items-center gap-2">
+        <span id="status-platform" class="opacity-60">Plataforma: —</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="opacity-40">Listo</span>
+        <span class="inline-block w-2 h-2 rounded-full bg-green-600 animate-pulse"></span>
+      </div>
+    </div>
+  </main>
+
+  <!-- ======================== CÓMO FUNCIONA ======================== -->
+  <section class="w-full mt-12" style="max-width: 850px;">
+    <h2 class="text-xl font-bold tracking-tight mb-6 flex items-center gap-2">
+      <span class="opacity-50">CÓMO FUNCIONA</span>
+      <span class="text-orange animate-pulse">>&nbsp;</span>
+    </h2>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+
+      <!-- Paso 01 -->
+      <div class="os-step-card" style="background: #F09351;">
+        <span class="os-step-number">01</span>
+        <h3 class="os-step-title">PEGA EL ENLACE</h3>
+        <p class="os-step-desc">Copia la URL de YouTube desde tu navegador.</p>
+      </div>
+
+      <!-- Paso 02 -->
+      <div class="os-step-card" style="background: #FFFDF9;">
+        <span class="os-step-number">02</span>
+        <h3 class="os-step-title">ELIGE EL FORMATO</h3>
+        <p class="os-step-desc">MP3 para audio puro de alta calidad, MP4 para video.</p>
+      </div>
+
+      <!-- Paso 03 -->
+      <div class="os-step-card" style="background: #EB7A29;">
+        <span class="os-step-number">03</span>
+        <h3 class="os-step-title">DESCARGA</h3>
+        <p class="os-step-desc">Haz clic y obtén tu archivo listo en segundos.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ======================== FOOTER RETRO ======================== -->
+  <footer class="w-full mt-16 mb-4 text-center">
+    <p class="text-xs opacity-40" style="font-size: 10px;">
+      © <script>document.write(new Date().getFullYear())</script> ConversorAudio · Derechos reservados.
+    </p>
+  </footer>
+
+  <!-- JS -->
+  <script src="js/app.js"></script>
+</body>
+</html>
